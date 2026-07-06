@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEET Growth Analytics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #1a202c;
+            --card: #2d3748;
+            --text: #edf2f7;
+            --accent: #4299e1;
+            --success: #48bb78;
+            --danger: #f56565;
+            --border: #4a5568;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card);
+            padding: 20px;
+            border-radius: 14px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+            box-sizing: border-box;
+        }
+        header {
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        h1 { font-size: 20px; margin: 0; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); }
+        .date-banner { font-size: 14px; color: #a0aec0; margin-top: 5px; }
+        .priority-banner {
+            background: rgba(66, 153, 225, 0.15);
+            border: 1px solid var(--accent);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .block-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+        }
+        .block-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .time-tag { font-size: 11px; font-weight: bold; color: var(--accent); text-transform: uppercase; }
+        .title-tag { font-size: 15px; font-weight: 600; margin-top: 2px; }
+        .btn-group { display: flex; gap: 8px; margin-top: 12px; }
+        .btn {
+            flex: 1;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 12px;
+            cursor: pointer;
+            background: #4a5568;
+            color: var(--text);
+            transition: all 0.2s;
+        }
+        .btn.active-done { background: var(--success); color: white; }
+        .btn.active-missed { background: var(--danger); color: white; }
+        
+        .input-box {
+            width: 100%;
+            background: #1a202c;
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 10px;
+            border-radius: 6px;
+            box-sizing: border-box;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+        .submit-section { margin-top: 25px; text-align: center; }
+        .btn-submit {
+            background: var(--accent);
+            color: white;
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .graph-section {
+            margin-top: 30px;
+            border-top: 1px solid var(--border);
+            padding-top: 20px;
+        }
+        canvas { max-width: 100%; background: rgba(0,0,0,0.1); border-radius: 8px; padding: 10px; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1 id="subjectHeader">NEET Tracker</h1>
+            <div class="date-banner" id="dateText">Loading Date...</div>
+        </header>
+
+        <div class="priority-banner" id="subjectPriority">Loading Priority Data...</div>
+
+        <div id="dynamicTasks"></div>
+
+        <div class="submit-section">
+            <button class="btn btn-submit" onclick="submitDayLog()">Lock Nightly Log & Update Graph</button>
+        </div>
+
+        <div class="graph-section">
+            <h2 style="font-size: 16px; margin-bottom: 15px; text-align: center;">Growth Consistency Graph</h2>
+            <canvas id="growthChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const scheduleConfigs = {
+            physics: {
+                title: "PHYSICS FOCUS DAY",
+                banner: "Priority: Vectors, Kinematics, & FBD System Reductions",
+                blocks: [
+                    { id: 'b1', time: '08:30 AM - 11:30 AM', title: 'Block 1: Physics Concept & Lecture Intake', type: 'status' },
+                    { id: 'b2', time: '02:30 PM - 05:00 PM', title: 'Block 2: Physics Numerical Drill Session', type: 'numeric', label: 'How many target Physics PYQs did you execute completely?' },
+                    { id: 'b3', time: '05:00 PM - 07:00 PM', title: 'Gym & Core Conditioning Break', type: 'status' },
+                    { id: 'b4', time: '07:30 PM - 09:30 PM', title: 'Block 3: Tutoring Delivery Session', type: 'status' },
+                    { id: 'b5', time: '10:30 PM - 11:30 PM', title: 'Block 4: Physics Formula Log & Error Journaling', type: 'status' }
+                ]
+            },
+            chemistry: {
+                title: "CHEMISTRY FOCUS DAY",
+                banner: "Priority: General Organic Chemistry (GOC) & Mole Calculations",
+                blocks: [
+                    { id: 'b1', time: '08:30 AM - 11:30 AM', title: 'Block 1: Chemistry Core Mechanism Layouts', type: 'status' },
+                    { id: 'b2', time: '02:30 PM - 05:00 PM', title: 'Block 2: Hydrocarbon & Reaction Tree Practice', type: 'numeric', label: 'How many Organic reactions or mechanisms did you solve?' },
+                    { id: 'b3', time: '05:00 PM - 07:00 PM', title: 'Gym & Core Conditioning Break', type: 'status' },
+                    { id: 'b4', time: '07:30 PM - 09:30 PM', title: 'Block 3: Tutoring Delivery Session', type: 'status' },
+                    { id: 'b5', time: '10:30 PM - 11:30 PM', title: 'Block 4: Night Reaction Index Tracking', type: 'status' }
+                ]
+            },
+            biology: {
+                title: "BIOLOGY FOCUS DAY",
+                banner: "Priority: Human Physiology Text Diagnostics",
+                blocks: [
+                    { id: 'b1', time: '08:30 AM - 11:30 AM', title: 'Block 1: NCERT High-Yield Active Highlighting', type: 'status' },
+                    { id: 'b2', time: '02:30 PM - 05:00 PM', title: 'Block 2: Biology Factual Diagnostic MCQs', type: 'numeric', label: 'How many Biology active recall MCQs did you complete?' },
+                    { id: 'b3', time: '05:00 PM - 07:00 PM', title: 'Gym & Core Conditioning Break', type: 'status' },
+                    { id: 'b4', time: '07:30 PM - 09:30 PM', title: 'Block 3: Tutoring Delivery Session', type: 'status' },
+                    { id: 'b5', time: '10:30 PM - 11:30 PM', title: 'Block 4: Active Recall Review Ledger', type: 'status' }
+                ]
+            },
+            sunday: {
+                title: "SUNDAY SYSTEM RESET",
+                banner: "System Status: Recovery Phase Active",
+                blocks: [
+                    { id: 'b1', time: 'Flexible Window', title: 'Alternate Sunday Testing Routine (Month 2 onwards)', type: 'status' }
+                ]
+            }
+        };
+
+        let currentSubject = 'physics';
+        let dailyAnswers = {};
+        let trackingHistory = JSON.parse(localStorage.getItem('neet_growth_history')) || [];
+        let chartInstance = null;
+
+        function determineSubject() {
+            const day = new Date().getDay();
+            if (day === 1 || day === 4) return 'physics'; 
+            if (day === 2 || day === 5) return 'chemistry'; 
+            if (day === 3 || day === 6) return 'biology'; 
+            return 'sunday'; 
+        }
+
+        function setupInterface() {
+            const now = new Date();
+            currentSubject = determineSubject();
+            const config = scheduleConfigs[currentSubject];
+
+            document.getElementById('dateText').innerText = now.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('subjectHeader').innerText = config.title;
+            document.getElementById('subjectPriority').innerText = config.banner;
+
+            const container = document.getElementById('dynamicTasks');
+            container.innerHTML = '';
+
+            dailyAnswers = {};
+
+            config.blocks.forEach(block => {
+                dailyAnswers[block.id] = { type: block.type, value: block.type === 'status' ? null : 0 };
+                
+                let dynamicField = '';
+                if (block.type === 'status') {
+                    dynamicField = `
+                        <div class="btn-group">
+                            <button class="btn" id="btn-done-${block.id}" onclick="setStatus('${block.id}', 'done')">Done</button>
+                            <button class="btn" id="btn-missed-${block.id}" onclick="setStatus('${block.id}', 'missed')">Missed</button>
+                        </div>
+                    `;
+                } else if (block.type === 'numeric') {
+                    dynamicField = `
+                        <label class="block-desc" style="display:block; margin-top:10px; font-size:13px; color:#cbd5e0;">${block.label}</label>
+                        <input type="number" class="input-box" id="num-${block.id}" min="0" placeholder="Enter target total number..." oninput="setNumeric('${block.id}', this.value)">
+                    `;
+                }
+
+                container.innerHTML += `
+                    <div class="block-card">
+                        <div class="block-header">
+                            <div>
+                                <span class="time-tag">${block.time}</span>
+                                <div class="title-tag">${block.title}</div>
+                            </div>
+                        </div>
+                        ${dynamicField}
+                    </div>
+                `;
+            });
+
+            renderChart();
+        }
+
+        function setStatus(id, state) {
+            dailyAnswers[id].value = state;
+            document.getElementById(`btn-done-${id}`).classList.remove('active-done');
+            document.getElementById(`btn-missed-${id}`).classList.remove('active-missed');
+            
+            if (state === 'done') document.getElementById(`btn-done-${id}`).classList.add('active-done');
+            if (state === 'missed') document.getElementById(`btn-missed-${id}`).classList.add('active-missed');
+        }
+
+        function setNumeric(id, value) {
+            dailyAnswers[id].value = parseInt(value) || 0;
+        }
+
+        function submitDayLog() {
+            const todayStr = new Date().toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
+            let earnedPoints = 0;
+            let totalAvailablePoints = 0;
+
+            for (const id in dailyAnswers) {
+                totalAvailablePoints += 100;
+                if (dailyAnswers[id].type === 'status' && dailyAnswers[id].value === 'done') {
+                    earnedPoints += 100;
+                } else if (dailyAnswers[id].type === 'numeric') {
+                    if (dailyAnswers[id].value > 0) {
+                        earnedPoints += 100; 
+                    }
+                }
+            }
+
+            const finalPercentage = totalAvailablePoints > 0 ? Math.round((earnedPoints / totalAvailablePoints) * 100) : 0;
+
+            trackingHistory = trackingHistory.filter(item => item.date !== todayStr);
+            trackingHistory.push({ date: todayStr, score: finalPercentage });
+
+            if (trackingHistory.length > 7) trackingHistory.shift(); 
+
+            localStorage.setItem('neet_growth_history', JSON.stringify(trackingHistory));
+            alert(`Log secured! Current Efficiency Score: ${finalPercentage}%`);
+            renderChart();
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('growthChart').getContext('2d');
+            const dates = trackingHistory.map(h => h.date);
+            const scores = trackingHistory.map(h => h.score);
+
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates.length === 0 ? ['Today'] : dates,
+                    datasets: [{
+                        label: 'Efficiency Tracking (%)',
+                        data: dates.length === 0 ? [0] : scores,
+                        borderColor: '#4299e1',
+                        backgroundColor: 'rgba(66, 153, 225, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.2,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#a0aec0' } },
+                        x: { grid: { display: false }, ticks: { color: '#a0aec0' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        window.onload = setupInterface;
+    </script>
+</body>
+</html>
